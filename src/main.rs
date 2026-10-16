@@ -31,8 +31,11 @@ fn connect_apctl(index: i32) {
             }
 
             match state {
-                psp::sys::ApctlState::GotIp => break,
-                _ => psp::dprintln!("Connecting..."),
+                psp::sys::ApctlState::GotIp => {
+                    psp::dprintln!("Connected!");
+                    break;
+                },
+                _ => (),
             }
 
             psp::sys::sceKernelDelayThread(50 * 1000); // 50 ms
@@ -40,10 +43,9 @@ fn connect_apctl(index: i32) {
     }
 }
 
-fn create_socket() -> i32 {
+fn create_socket() -> (i32, psp::sys::sockaddr) {
     let s = unsafe {
         let socket = psp::sys::sceNetInetSocket(2, 1, 0);
-        if socket < 0 { return -1; }
 
         let mut server_address = psp::sys::sockaddr {
             sa_len: 16,
@@ -61,9 +63,11 @@ fn create_socket() -> i32 {
         server_address.sa_data[4] = ipv4[2];
         server_address.sa_data[5] = ipv4[3];
 
-        let _ = psp::sys::sceNetInetConnect(socket, &server_address, 16);
-
-        socket
+        if socket < 0 {
+            return (-1, server_address);
+        }
+        
+        (socket, server_address)
     };
 
     s
@@ -73,6 +77,9 @@ fn psp_main() {
     psp::enable_home_button();
 
     unsafe {
+        psp::sys::sceUtilityLoadNetModule(psp::sys::NetModule::NetCommon);
+        psp::sys::sceUtilityLoadNetModule(psp::sys::NetModule::NetInet);
+
         // values got from https://github.com/pspdev/pspsdk/blob/master/src/sdk/inethelper.c#L64
         let _ = psp::sys::sceNetInit(0x20000, 0x20, 0x1000, 0x20, 0x1000);
         let _ = psp::sys::sceNetInetInit();
@@ -85,21 +92,24 @@ fn psp_main() {
         let mut pad_data = psp::sys::SceCtrlData::default();
 
         connect_apctl(1);
-        let socket = create_socket();
         loop {
+            let socket = create_socket();
+            let _ = psp::sys::sceNetInetConnect(socket.0, &socket.1, 16);
             let _ = psp::sys::sceCtrlReadBufferPositive(&mut pad_data, 1);
-    
+
             if pad_data.buttons.contains(psp::sys::CtrlButtons::CIRCLE) {
                 psp::dprintln!("CIRCLE was pressed!");
                 let on = "GET /on HTTP/1.1\r\nHost: 192.168.4.1\r\nConnection: close\r\n\r\n";
-                psp::sys::sceNetInetSend(socket, on.as_ptr() as *const core::ffi::c_void, on.len(), 0);
+                psp::sys::sceNetInetSend(socket.0, on.as_ptr() as *const core::ffi::c_void, on.len(), 0);
             }
 
             if pad_data.buttons.contains(psp::sys::CtrlButtons::CROSS) {
                 psp::dprintln!("CROSS was pressed");
                 let off = "GET /off HTTP/1.1\r\nHost: 192.168.4.1\r\nConnection: close\r\n\r\n";
-                psp::sys::sceNetInetSend(socket, off.as_ptr() as *const core::ffi::c_void, off.len(), 0);
+                psp::sys::sceNetInetSend(socket.0, off.as_ptr() as *const core::ffi::c_void, off.len(), 0);
             }
+
+            psp::sys::sceNetInetClose(socket.0);
         }
     }
 }
