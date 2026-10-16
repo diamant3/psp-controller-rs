@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+const SERVER_ADDRESS: &str = "192.168.4.1";
+const SERVER_PORT: u16 = 80;
+
 psp::module!("psp-controller-rs", 0, 1);
 
 fn connect_apctl(index: i32) {
@@ -55,11 +58,18 @@ fn psp_main() {
             sa_data: [0; 14],
         };
 
-        let port_bytes = (80 as u16).to_be_bytes();
+        let port_bytes = SERVER_PORT.to_be_bytes();
         server_address.sa_data[0] = port_bytes[0];
         server_address.sa_data[1] = port_bytes[1];
 
-        let ipv4 = [192, 168, 4, 1];
+        let mut parts = SERVER_ADDRESS.trim().split('.');
+        let ipv4: [u8; 4] = [
+            parts.next().unwrap().parse().unwrap(),
+            parts.next().unwrap().parse().unwrap(),
+            parts.next().unwrap().parse().unwrap(),
+            parts.next().unwrap().parse().unwrap(),
+        ];
+        
         server_address.sa_data[2] = ipv4[0];
         server_address.sa_data[3] = ipv4[1];
         server_address.sa_data[4] = ipv4[2];
@@ -82,7 +92,7 @@ fn psp_main() {
                 }
 
                 if pad_data.buttons.contains(psp::sys::CtrlButtons::CROSS) {
-                    psp::dprintln!("CROSS was pressed");
+                    psp::dprintln!("CROSS was pressed!");
                     let off = "GET /off HTTP/1.1\r\nHost: 192.168.4.1\r\nConnection: close\r\n\r\n";
                     psp::sys::sceNetInetSend(socket, off.as_ptr() as *const core::ffi::c_void, off.len(), 0);
                 }
