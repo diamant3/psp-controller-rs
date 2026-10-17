@@ -78,7 +78,7 @@ fn psp_main() {
         connect_apctl(1);
         loop {
             let socket = psp::sys::sceNetInetSocket(2, 1, 0);
-            if socket < 0 { return; }
+            if socket < 0 { break; }
 
             let _ = psp::sys::sceCtrlReadBufferPositive(&mut pad_data, 1);
 
@@ -100,5 +100,13 @@ fn psp_main() {
 
             psp::sys::sceNetInetClose(socket);
         }
+
+        let _ = psp::sys::sceNetApctlTerm();
+        let _ = psp::sys::sceNetResolverTerm();
+        let _ = psp::sys::sceNetInetTerm();
+        let _ = psp::sys::sceNetTerm();
+
+        let _ = psp::sys::sceUtilityUnloadNetModule(psp::sys::NetModule::NetInet);
+        let _ = psp::sys::sceUtilityUnloadNetModule(psp::sys::NetModule::NetCommon);
     }
 }
