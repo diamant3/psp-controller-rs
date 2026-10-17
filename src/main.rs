@@ -59,21 +59,16 @@ fn psp_main() {
         };
 
         let port_bytes = SERVER_PORT.to_be_bytes();
-        server_address.sa_data[0] = port_bytes[0];
-        server_address.sa_data[1] = port_bytes[1];
+        for (index, byte) in port_bytes.iter().enumerate() {
+            server_address.sa_data[index] = *byte;
+        }
 
-        let mut parts = SERVER_ADDRESS.trim().split('.');
-        let ipv4: [u8; 4] = [
-            parts.next().unwrap().parse().unwrap(),
-            parts.next().unwrap().parse().unwrap(),
-            parts.next().unwrap().parse().unwrap(),
-            parts.next().unwrap().parse().unwrap(),
-        ];
-        
-        server_address.sa_data[2] = ipv4[0];
-        server_address.sa_data[3] = ipv4[1];
-        server_address.sa_data[4] = ipv4[2];
-        server_address.sa_data[5] = ipv4[3];
+        let ip_string = SERVER_ADDRESS.split('.');
+        for (index, bytes) in ip_string.enumerate() {
+            if let Ok(octet) = bytes.parse::<u8>() {
+                server_address.sa_data[index + 2] = octet;
+            }
+        }
 
         connect_apctl(1);
         loop {
