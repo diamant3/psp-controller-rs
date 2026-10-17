@@ -87,13 +87,13 @@ fn psp_main() {
 
                 if pad_data.buttons.contains(psp::sys::CtrlButtons::CIRCLE) {
                     psp::dprintln!("CIRCLE was pressed!");
-                    let on = "GET /on HTTP/1.1\r\nHost: 192.168.4.1\r\nConnection: close\r\n\r\n";
+                    let on = "GET /on HTTP/1.1\r\nHost: {SERVER_ADDRESS}\r\nConnection: close\r\n\r\n";
                     psp::sys::sceNetInetSend(socket, on.as_ptr() as *const core::ffi::c_void, on.len(), 0);
                 }
 
                 if pad_data.buttons.contains(psp::sys::CtrlButtons::CROSS) {
                     psp::dprintln!("CROSS was pressed!");
-                    let off = "GET /off HTTP/1.1\r\nHost: 192.168.4.1\r\nConnection: close\r\n\r\n";
+                    let off = "GET /off HTTP/1.1\r\nHost: {SERVER_ADDRESS}\r\nConnection: close\r\n\r\n";
                     psp::sys::sceNetInetSend(socket, off.as_ptr() as *const core::ffi::c_void, off.len(), 0);
                 }
             }
